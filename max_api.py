@@ -42,8 +42,17 @@ class MaxBot:
             resp.raise_for_status()
             return resp.json()["updates"]
 
-    async def send_message(self, user_id: int, text: str):
+    async def send_message(self, user_id: int, text: str, format=None):
         async with httpx.AsyncClient() as client:
+            if format:
+                body = {
+                        "text": text,
+                        "format": format
+                    }
+            else:
+                body = {
+                        "text": text
+                    }
             resp = await client.post(
                 f"{BASE_URL}/messages",
                 headers=HEADERS,
@@ -51,9 +60,7 @@ class MaxBot:
                     "recipient": {
                         "user_id": user_id
                     },
-                    "body": {
-                         "text": text
-                    }
+                    "body": body
                 }
             )
 

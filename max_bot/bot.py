@@ -11,11 +11,16 @@ class Bot:
     def __init__(self, token: str):
         self.client = MaxClient(token)
 
-    async def send_message(self, chat_id: int, text: str):
-
-        json = {
-            "text": text
-        }
+    async def send_message(self, chat_id: int, text: str, format=None):
+        if format:
+            json = {
+                "text": text,
+                "format": format
+            }
+        else:
+            json = {
+                "text": text
+            }
         params = {"user_id": chat_id}
 
         data = await self.client.request(
