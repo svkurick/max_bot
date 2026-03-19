@@ -1,0 +1,6 @@
+[project]
+name = "max_bot"
+version = "0.1.0"
+dependencies = [
+    "httpx"
+]
