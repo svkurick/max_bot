@@ -12,11 +12,11 @@ class Message:
         sender = data.get("sender") or {}
         self.chat_id = sender.get("user_id")
 
-    async def answer(self, text):
+    async def answer(self, text, format=None):
         if not self.chat_id:
             # просто игнорируем, если некуда писать
             return
-        return await self.bot.send_message(chat_id=self.chat_id, text=text)
+        return await self.bot.send_message(chat_id=self.chat_id, text=text, format=format)
 
     async def send_document(self, file_path):
         if not self.chat_id:
