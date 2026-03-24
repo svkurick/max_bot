@@ -2,6 +2,7 @@ from importlib.metadata import files
 
 import httpx
 import os
+import asyncio
 
 class MaxClient:
 
@@ -26,7 +27,8 @@ class MaxClient:
             files=None,
             data=None,
             type_param=None,
-            base_url_blank=False
+            base_url_blank=False,
+            max_retries=5,
     ) -> dict:
         headers = {
             "Authorization": self.token
@@ -39,15 +41,37 @@ class MaxClient:
         else:
             path_url = f"{self.base_url}{path}"
 
-        r = await self.client.request(
-            method,
-            path_url,
-            json=json,
-            params=params,
-            files=files,
-            data=data,
-            headers=headers
-        )
+        delay = 1
 
-        r.raise_for_status()
-        return r.json()
+        for attempt in range(max_retries):
+            r = await self.client.request(
+                method,
+                path_url,
+                json=json,
+                params=params,
+                files=files,
+                data=data,
+                headers=headers
+            )
+            try:
+                data_resp = r.json()
+            except Exception:
+                data_resp = {}
+
+                # 🔥 проверка attachment.not.ready
+            code = data_resp.get("code")
+            if (
+                isinstance(data_resp, dict)
+                and data_resp.get("code") == "attachment.not.ready"
+            ):
+                print(f"⏳ attachment not ready, retry {attempt + 1}, sleep {delay}s")
+                await asyncio.sleep(delay)
+                delay += 3
+                continue
+
+            # если статус плохой — падаем
+            r.raise_for_status()
+
+            return data_resp
+
+        raise Exception("❌ Превышено количество попыток (attachment not ready)")
