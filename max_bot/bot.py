@@ -70,9 +70,6 @@ class Bot:
 
             params = {"user_id": chat_id}
 
-            time.sleep(2)
-
-
             await self.client.request(
                 "POST",
                 "/messages",
