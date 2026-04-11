@@ -70,13 +70,15 @@ class Bot:
         token = next(iter(photos.values()))["token"]
         return {"token": token}
 
-    async def send_image(self, chat_id: int, file_path: str, text: str = None, format: str = None):
+    async def send_image(self, chat_id: int, file_path: str, text: str = None, format: str = None, buttons=None):
         upload = await self.upload_image(file_path)
         image_token = upload["token"]
         body = {"text": text} if text else {}
         if format:
             body["format"] = format
         body["attachments"] = [{"type": "image", "payload": {"token": image_token}}]
+        if buttons:
+            body["attachments"].append(_build_keyboard(buttons))
         data = await self.client.request("POST", "/messages", json=body, params={"user_id": chat_id})
         return Message(data["message"], self)
 
