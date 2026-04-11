@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pymaxbot"
-version = "0.1.3"
+version = "0.1.4"
 description = "Python SDK for MAX messenger bot API"
 readme = "README.md"
 license = { file = "LICENSE" }
