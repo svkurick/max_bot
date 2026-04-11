@@ -1,7 +1,4 @@
-from importlib.metadata import files
-
 import httpx
-import os
 import asyncio
 
 class MaxClient:
@@ -59,7 +56,6 @@ class MaxClient:
                 data_resp = {}
 
                 # 🔥 проверка attachment.not.ready
-            code = data_resp.get("code")
             if (
                 isinstance(data_resp, dict)
                 and data_resp.get("code") == "attachment.not.ready"
@@ -70,6 +66,8 @@ class MaxClient:
                 continue
 
             # если статус плохой — падаем
+            if r.is_error:
+                print(f"❌ HTTP {r.status_code} response body:", r.text)
             r.raise_for_status()
 
             return data_resp
