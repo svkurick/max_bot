@@ -1,4 +1,3 @@
-import asyncio
 import os
 import httpx
 
@@ -44,7 +43,6 @@ class Bot:
         body = {
             "attachments": [{"type": "file", "payload": {"token": file_token}}]
         }
-        await asyncio.sleep(2)
         data = await self.client.request("POST", "/messages", json=body, params={"user_id": chat_id})
         return Message(data["message"], self)
 
