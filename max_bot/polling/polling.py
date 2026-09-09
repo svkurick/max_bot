@@ -1,11 +1,15 @@
 import asyncio
+import logging
+
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 async def run_polling(bot, dispatcher):
 
     offset = 0
-    print("🤖 Бот запущен, ожидаю сообщения...")
+    logger.info("Бот запущен, ожидаю сообщения")
 
     while True:
         try:
@@ -32,6 +36,6 @@ async def run_polling(bot, dispatcher):
         except httpx.ReadTimeout:
             continue
 
-        except Exception as e:
-            print("Polling error:", e)
+        except Exception:
+            logger.exception("Ошибка при получении обновлений")
             await asyncio.sleep(1)

@@ -1,5 +1,16 @@
 import httpx
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_target(method: str, url: str) -> str:
+    """
+    Метод и путь запроса без query-строки: в ней передаются
+    токены загрузки и идентификаторы пользователей.
+    """
+    return f"{method} {url.split('?', 1)[0]}"
 
 class MaxClient:
 
@@ -60,16 +71,27 @@ class MaxClient:
                 isinstance(data_resp, dict)
                 and data_resp.get("code") == "attachment.not.ready"
             ):
-                print(f"⏳ attachment not ready, retry {attempt + 1}, sleep {delay}s")
+                logger.debug(
+                    "Вложение ещё не готово, попытка %s, пауза %s с",
+                    attempt + 1, delay
+                )
                 await asyncio.sleep(delay)
                 delay += 3
                 continue
 
             # если статус плохой — падаем
             if r.is_error:
-                print(f"❌ HTTP {r.status_code} response body:", r.text)
+                # Тело ответа только на уровне DEBUG: оно может содержать
+                # служебные данные, которым не место в обычном выводе.
+                logger.error(
+                    "Запрос %s завершился с HTTP %s",
+                    _safe_target(method, path_url), r.status_code
+                )
+                logger.debug("Тело ответа: %s", r.text)
             r.raise_for_status()
 
             return data_resp
 
-        raise Exception("❌ Превышено количество попыток (attachment not ready)")
+        raise RuntimeError(
+            "Превышено количество попыток: вложение не готово"
+        )
