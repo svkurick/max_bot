@@ -28,28 +28,34 @@ class Dispatcher:
         return decorator
 
     async def process_update(self, update):
+        if not isinstance(update, dict):
+            return
         update_type = update.get("update_type")
 
         if update_type == "message_callback":
             await self._process_callback(update)
-        elif "message" in update:
+        elif isinstance(update.get("message"), dict):
             await self._process_message(update["message"])
+
+    # Сообщение/callback получает только первый подходящий обработчик — даже
+    # если он упал. Иначе при ошибке событие «проваливалось» бы в следующий
+    # обработчик (например, в общий @dp.message()).
 
     async def _process_message(self, raw_message: dict):
         message = Message(raw_message, self.bot)
         for handler in self.handlers:
             commands = handler["commands"]
             if commands:
-                if not message.text:
+                words = message.text.split() if message.text else []
+                if not words:
                     continue
-                cmd_word = message.text.split()[0]
-                if not any(cmd_word == f"/{cmd}" for cmd in commands):
+                if not any(words[0] == f"/{cmd}" for cmd in commands):
                     continue
             try:
                 await handler["func"](message)
-                break
             except Exception as e:
                 print("❌ Handler error:", e)
+            return
 
     async def _process_callback(self, update: dict):
         cb = Callback(update, self.bot)
@@ -59,6 +65,6 @@ class Dispatcher:
                 continue
             try:
                 await handler["func"](cb)
-                break
             except Exception as e:
                 print("❌ Callback handler error:", e)
+            return

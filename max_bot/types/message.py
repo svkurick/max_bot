@@ -1,18 +1,25 @@
+def _as_dict(value) -> dict:
+    """Данные из API не проверены: всё, что не dict, считаем пустым."""
+    return value if isinstance(value, dict) else {}
+
+
 class Message:
 
     def __init__(self, data, bot):
+        data = _as_dict(data)
         self.data = data
         self.bot = bot
 
-        body = data.get("body") or {}
+        body = _as_dict(data.get("body"))
 
-        self.text = body.get("text")
+        text = body.get("text")
+        self.text = text if isinstance(text, str) else None
         self.mid = body.get("mid")
 
-        sender = data.get("sender") or {}
+        sender = _as_dict(data.get("sender"))
         self.chat_id = sender.get("user_id")
 
-        recipient = data.get("recipient") or {}
+        recipient = _as_dict(data.get("recipient"))
         self.dialog_chat_id = recipient.get("chat_id")
 
     async def answer(self, text: str, format=None, buttons=None):

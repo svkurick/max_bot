@@ -1,11 +1,17 @@
 import httpx
 import asyncio
 
+# Домены, на которые MAX выдаёт URL для загрузки файлов (см. POST /uploads).
+# Токен бота отправляется только на них.
+UPLOAD_HOSTS = ("oneme.ru", "okcdn.ru")
+
+
 class MaxClient:
 
-    def __init__(self, token: str, base_url="https://platform-api.max.ru"):
+    def __init__(self, token: str, base_url="https://platform-api.max.ru", upload_hosts=UPLOAD_HOSTS):
         self.base_url = base_url
         self.token = token
+        self.upload_hosts = tuple(upload_hosts)
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(
                 connect=10.0,
@@ -34,7 +40,7 @@ class MaxClient:
             params = {'type': type_param}
 
         if base_url_blank:
-            path_url = path
+            path_url = self._check_upload_url(path)
         else:
             path_url = f"{self.base_url}{path}"
 
@@ -73,3 +79,18 @@ class MaxClient:
             return data_resp
 
         raise Exception("❌ Превышено количество попыток (attachment not ready)")
+
+    def _check_upload_url(self, url) -> httpx.URL:
+        """Не даём отправить токен на произвольный адрес из ответа API.
+
+        Возвращает разобранный httpx.URL — запрос уходит ровно на тот адрес,
+        который прошёл проверку (без расхождений между парсерами).
+        """
+        if not isinstance(url, str):
+            raise ValueError("❌ API не вернул URL для загрузки")
+        parsed = httpx.URL(url)
+        host = parsed.host.rstrip(".").lower()
+        trusted = any(host == h or host.endswith("." + h) for h in self.upload_hosts)
+        if parsed.scheme != "https" or not trusted:
+            raise ValueError(f"❌ Недоверенный URL загрузки: {parsed.scheme}://{host}")
+        return parsed
