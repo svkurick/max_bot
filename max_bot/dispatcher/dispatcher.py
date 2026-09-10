@@ -1,5 +1,9 @@
+import logging
+
 from ..types.message import Message
 from ..types.callback import Callback
+
+logger = logging.getLogger(__name__)
 
 
 class Dispatcher:
@@ -53,8 +57,8 @@ class Dispatcher:
                     continue
             try:
                 await handler["func"](message)
-            except Exception as e:
-                print("❌ Handler error:", e)
+            except Exception:
+                logger.exception("Ошибка обработчика сообщения")
             return
 
     async def _process_callback(self, update: dict):
@@ -65,6 +69,6 @@ class Dispatcher:
                 continue
             try:
                 await handler["func"](cb)
-            except Exception as e:
-                print("❌ Callback handler error:", e)
+            except Exception:
+                logger.exception("Ошибка обработчика колбэка")
             return

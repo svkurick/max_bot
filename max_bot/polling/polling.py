@@ -1,5 +1,9 @@
 import asyncio
+import logging
+
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 async def run_polling(bot, dispatcher, timeout=30, max_pending_per_user=10):
@@ -20,15 +24,15 @@ async def run_polling(bot, dispatcher, timeout=30, max_pending_per_user=10):
         try:
             async with lock:
                 await dispatcher.process_update(update)
-        except Exception as e:
-            print("❌ Update processing error:", e)
+        except Exception:
+            logger.exception("Ошибка обработки события")
         finally:
             pending[key] -= 1
             if pending[key] == 0:
                 del pending[key]
                 locks.pop(key, None)
 
-    print("🤖 Бот запущен, ожидаю сообщения...")
+    logger.info("Бот запущен, ожидаю сообщения")
 
     while True:
         try:
@@ -50,7 +54,7 @@ async def run_polling(bot, dispatcher, timeout=30, max_pending_per_user=10):
             for update in updates:
                 key = _user_key(update)
                 if pending.get(key, 0) >= max_pending_per_user:
-                    print(f"⚠️ Слишком много событий от {key}, событие пропущено")
+                    logger.warning("Слишком много событий от пользователя %s, событие пропущено", key)
                     continue
                 pending[key] = pending.get(key, 0) + 1
                 task = asyncio.create_task(handle(key, update))
@@ -60,8 +64,8 @@ async def run_polling(bot, dispatcher, timeout=30, max_pending_per_user=10):
         except httpx.ReadTimeout:
             continue
 
-        except Exception as e:
-            print("Polling error:", e)
+        except Exception:
+            logger.exception("Ошибка при получении обновлений")
             await asyncio.sleep(1)
 
 

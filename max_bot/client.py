@@ -1,5 +1,18 @@
 import httpx
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _safe_target(method: str, url) -> str:
+    """
+    Метод и путь запроса без query-строки: в ней передаются
+    токены загрузки и идентификаторы пользователей.
+    """
+    # url может быть и строкой, и httpx.URL (адрес загрузки)
+    return f"{method} {str(url).split('?', 1)[0]}"
+
 
 # Домены, на которые MAX выдаёт URL для загрузки файлов (см. POST /uploads).
 # Токен бота отправляется только на них.
@@ -66,19 +79,30 @@ class MaxClient:
                 isinstance(data_resp, dict)
                 and data_resp.get("code") == "attachment.not.ready"
             ):
-                print(f"⏳ attachment not ready, retry {attempt + 1}, sleep {delay}s")
+                logger.debug(
+                    "Вложение ещё не готово, попытка %s, пауза %s с",
+                    attempt + 1, delay
+                )
                 await asyncio.sleep(delay)
                 delay += 3
                 continue
 
             # если статус плохой — падаем
             if r.is_error:
-                print(f"❌ HTTP {r.status_code} response body:", r.text)
+                # Тело ответа только на уровне DEBUG: оно может содержать
+                # служебные данные, которым не место в обычном выводе.
+                logger.error(
+                    "Запрос %s завершился с HTTP %s",
+                    _safe_target(method, path_url), r.status_code
+                )
+                logger.debug("Тело ответа: %s", r.text)
             r.raise_for_status()
 
             return data_resp
 
-        raise Exception("❌ Превышено количество попыток (attachment not ready)")
+        raise RuntimeError(
+            "Превышено количество попыток: вложение не готово"
+        )
 
     def _check_upload_url(self, url) -> httpx.URL:
         """Не даём отправить токен на произвольный адрес из ответа API.
@@ -87,10 +111,10 @@ class MaxClient:
         который прошёл проверку (без расхождений между парсерами).
         """
         if not isinstance(url, str):
-            raise ValueError("❌ API не вернул URL для загрузки")
+            raise ValueError("API не вернул URL для загрузки")
         parsed = httpx.URL(url)
         host = parsed.host.rstrip(".").lower()
         trusted = any(host == h or host.endswith("." + h) for h in self.upload_hosts)
         if parsed.scheme != "https" or not trusted:
-            raise ValueError(f"❌ Недоверенный URL загрузки: {parsed.scheme}://{host}")
+            raise ValueError(f"Недоверенный URL загрузки: {parsed.scheme}://{host}")
         return parsed

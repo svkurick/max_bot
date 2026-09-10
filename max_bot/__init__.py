@@ -1,7 +1,8 @@
 from importlib.metadata import version, PackageNotFoundError
 
 try:
-    __version__ = version("max_bot")
+    # Имя дистрибутива (pymaxbot) не совпадает с именем пакета (max_bot).
+    __version__ = version("pymaxbot")
 except PackageNotFoundError:
     __version__ = "0.0.0"
 
